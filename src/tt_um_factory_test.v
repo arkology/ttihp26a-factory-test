@@ -19,22 +19,49 @@ module tt_um_factory_test (
     input  wire       rst_n     // reset_n - low to reset
 );
 
-  reg rst_n_i;
-  reg [7:0] cnt;
+wire [7:0] _unused_pins1 = ui_in;
+assign uo_out[7:1]  = 7'h00;
+assign uio_out[7:0] = 8'h00;
+wire [7:0] _unused_pins2 = uio_in;
+wire _unused_pins = ena;
+assign uio_oe  = 8'h00;
 
-  always @(posedge clk or negedge rst_n)
-    if (~rst_n) rst_n_i <= 1'b0;
-    else rst_n_i <= 1'b1;
+parameter INIT = 16'h0001;
 
-  always @(posedge clk or negedge rst_n_i)
-    if (~rst_n_i) cnt <= 0;
-    else cnt <= cnt + 1;
+reg [15:0] nlfsr_reg;
+wire feedback_bit;
 
-  assign uo_out  = ~rst_n ? ui_in : ui_in[0] ? cnt : uio_in;
-  assign uio_out = ui_in[0] ? cnt : 8'h00;
-  assign uio_oe  = rst_n && ui_in[0] ? 8'hff : 8'h00;
+assign uo_out[0] = nlfsr_reg[0];
 
-  // avoid linter warning about unused pins:
-  wire _unused_pins = ena;
+
+assign feedback_bit = nlfsr_reg[0] ^ nlfsr_reg[8] ^ nlfsr_reg[15] ^ (nlfsr_reg[1] * nlfsr_reg[2] * nlfsr_reg[3] * nlfsr_reg[9]);
+
+always @(posedge clk or negedge rst_n) begin
+    if (!rst_n) begin
+        nlfsr_reg <= INIT;
+    end
+    else if (ui_in[0]) begin
+        nlfsr_reg <= {feedback_bit, nlfsr_reg[15:1]};
+    end
+end
+
+
+  // reg rst_n_i;
+  // reg [7:0] cnt;
+
+  // always @(posedge clk or negedge rst_n)
+  //   if (~rst_n) rst_n_i <= 1'b0;
+  //   else rst_n_i <= 1'b1;
+
+  // always @(posedge clk or negedge rst_n_i)
+  //   if (~rst_n_i) cnt <= 0;
+  //   else cnt <= cnt + 1;
+
+  // assign uo_out  = ~rst_n ? ui_in : ui_in[0] ? cnt : uio_in;
+  // assign uio_out = ui_in[0] ? cnt : 8'h00;
+  // assign uio_oe  = rst_n && ui_in[0] ? 8'hff : 8'h00;
+
+  // // avoid linter warning about unused pins:
+  // wire _unused_pins = ena;
 
 endmodule  // tt_um_factory_test
