@@ -26,24 +26,53 @@ wire [7:0] _unused_pins2 = uio_in;
 wire _unused_pins = ena;
 assign uio_oe  = 8'h00;
 
-parameter INIT = 16'h0001;
 
-reg [15:0] nlfsr_reg;
+
+parameter INIT = 16'hACE1;
+
+reg [15:0] lfsr_reg;
 wire feedback_bit;
+wire filter_output;
 
-assign uo_out[0] = nlfsr_reg[0];
+assign uo_out[0] = filter_output;
 
+// Feedback: x^16 + x^5 + x^3 + x^2 + 1
+assign feedback_bit = lfsr_reg[15] ^ lfsr_reg[4] ^ lfsr_reg[2] ^ lfsr_reg[1];
 
-assign feedback_bit = nlfsr_reg[0] ^ nlfsr_reg[8] ^ nlfsr_reg[15] ^ (nlfsr_reg[1] * nlfsr_reg[2] * nlfsr_reg[3] * nlfsr_reg[9]);
+// Nonlinear filter function
+assign filter_output = (lfsr_reg[14] & lfsr_reg[11]) ^ 
+                      (lfsr_reg[9] & lfsr_reg[6]) ^ 
+                      (lfsr_reg[15] | lfsr_reg[8]) ^ 
+                      lfsr_reg[2];
 
 always @(posedge clk or negedge rst_n) begin
     if (!rst_n) begin
-        nlfsr_reg <= INIT;
+        lfsr_reg <= INIT;
     end
     else if (ui_in[0]) begin
-        nlfsr_reg <= {feedback_bit, nlfsr_reg[15:1]};
+        lfsr_reg <= {lfsr_reg[14:0], feedback_bit};
     end
 end
+
+
+// parameter INIT = 16'h0001;
+
+// reg [15:0] nlfsr_reg;
+// wire feedback_bit;
+
+// assign uo_out[0] = nlfsr_reg[0];
+
+
+// assign feedback_bit = nlfsr_reg[0] ^ nlfsr_reg[8] ^ nlfsr_reg[15] ^ (nlfsr_reg[1] * nlfsr_reg[2] * nlfsr_reg[3] * nlfsr_reg[9]);
+
+// always @(posedge clk or negedge rst_n) begin
+//     if (!rst_n) begin
+//         nlfsr_reg <= INIT;
+//     end
+//     else if (ui_in[0]) begin
+//         nlfsr_reg <= {feedback_bit, nlfsr_reg[15:1]};
+//     end
+// end
 
 
   // reg rst_n_i;
